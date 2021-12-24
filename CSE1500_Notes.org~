@@ -4,7 +4,7 @@
 #+TAGS: CSE1500, StudyNotes
 #+STARTUP: inlineimages
 
-* DISCLAIME
+* DISCLAIMER
   Most of the notes here are a summarization of the provided lectures and lecture notes. When in doubt, always refer to the original sources.
 * HTTP
 ** [[https://en.wikipedia.org/wiki/List_of_HTTP_status_codes][Status Codes]]

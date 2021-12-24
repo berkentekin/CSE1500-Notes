@@ -1,0 +1,531 @@
+% Created 2021-12-24 Fri 18:11
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\usepackage{minted}
+\author{Berken Tekin}
+\date{\today}
+\title{CSE1500 Web Technology Notes}
+\hypersetup{
+ pdfauthor={Berken Tekin},
+ pdftitle={CSE1500 Web Technology Notes},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 28.0.50 (Org mode 9.4.6)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+
+\section{DISCLAIMER}
+\label{sec:org25305b9}
+Most of the notes here are a summarization of the provided lectures and lecture notes. When in doubt, always refer to the original sources.
+\section{HTTP}
+\label{sec:org7de9b23}
+\subsection{\href{https://en.wikipedia.org/wiki/List\_of\_HTTP\_status\_codes}{Status Codes}}
+\label{sec:orge5dc3c8}
+\begin{description}
+\item[{1xx informational response}] Indicates that the request was received and understood.
+\item[{2xx success}] The action requested by the client was received, understood and accepted.
+\item[{3xx redirection}] Indicates the client must take additional action to complete the request.
+Many of these status codes are used in URL redirection.
+\item[{4xx client errors}] For errors that seem to have been caused by the client.
+\item[{5xx server errors}] The server failed to fulfil a request.
+Except when responding to a HEAD request, the server \emph{should} include an entity
+containing an explanation of the error situation,
+and indicate whether it is a temporary or permanent condition.
+Likewise, user agents should display any included entity to the user.
+\end{description}
+\subsection{Common Headers}
+\label{sec:org5fc8024}
+\begin{center}
+\begin{tabular}{ll}
+Header & Description\\
+\hline
+\textbf{Content-Type} & Entity Type\\
+\textbf{Content-Length} & Length/size of the message\\
+\textbf{Content-Encoding} & Data transformations applied to the entity\\
+Content-Location & Alternative location of the entity\\
+Content-Range & Range defines the pieces sent for partial entities\\
+\textbf{Content-MD5} & \href{https://en.wikipedia.org/wiki/Checksum}{Checksum} of the content\\
+\textbf{Expires} & Date at wich the entity wll become stale\\
+\textbf{Last-Modified} & Most recent creation/modification date of the entry\\
+Allow & The legal request methods for the entity\\
+\textbf{Connection \& Upgrade} & Protocol Update\\
+\end{tabular}
+\end{center}
+\subsubsection{Content-Type}
+\label{sec:org6d706c7}
+\begin{itemize}
+\item \href{https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics\_of\_HTTP/MIME\_types}{MIME}\textsubscript{Multipurpose Internet Mail Extensions} types determine the clients' reaction to data.
+\item A standard MIME Pattern looks like \texttt{[primary object type]/[subtype]} Every MIME has a
+primary object type and a subtype.
+\item Examples:
+\begin{itemize}
+\item text/plain
+\item text/html
+\item image/jpeg
+\item application/pdf
+\end{itemize}
+\end{itemize}
+\subsubsection{Content-Length}
+\label{sec:orgf60bd98}
+\begin{itemize}
+\item Indicates the \emph{size} of the entity body
+\item Necessary to detect premature message truncation due to extenuating circumstances
+\item Used to discover where one HTTP message ends and the next begins for \textbf{persistent connections}, which reuse a \href{https://en.wikipedia.org/wiki/Transmission\_Control\_Protocol}{TCP}
+connection for multiple HTTP request/response messages
+\end{itemize}
+\subsubsection{Content-MD5 (RFC 1321)}
+\label{sec:org2f5eed0}
+\begin{itemize}
+\item HTTP messages are sent via TCP (this'll change in \href{https://en.wikipedia.org/wiki/HTTP/3}{HTTP/3})
+\item However, as the internet is decentralize, different servers implement the protocol differently,
+which causes bugs
+\item To counter this, sender generates a 128-bit MD5 checksum of the content
+to detect unintended modifications. This procedure is called \textbf{sanity check.}
+\item Has been removed from \href{https://en.wikipedia.org/wiki/Hypertext\_Transfer\_Protocol}{HTTP/1.1} specification (2014), however; this simple technique
+is still in use
+\end{itemize}
+\subsubsection{Expires}
+\label{sec:org2616474}
+\begin{itemize}
+\item Contains the date/time after which the response is considered stale/invalid.
+\item Invalid dates, like the value 0, represent a date in the past and mean that the resource is already expired.
+\item Web caches have several advantages:
+\begin{enumerate}
+\item Reduces redundant data transfer
+\item Reduces network bottlenecks
+\item Reduces demand on origin servers
+\item Reduces distance delay
+\end{enumerate}
+\item \texttt{Cache-Control} is a header that overrules \texttt{Expires}. While \texttt{Expires}
+indicates a resource's expiration date in absolute terms (a specific date/time),
+\texttt{Cache-Control} indicates it in relative terms (seconds sicne being sent).
+This is an advantage because the server doesn't have to "reaassign" a specific date/time for expiration repeatedly.
+\end{itemize}
+\subsubsection{Last-Modified}
+\label{sec:orgc60b11c}
+\begin{itemize}
+\item Contains the date on which the resource was last \textbf{altered}
+\item \uline{No indication} about the amount of changes
+\item Often used with \texttt{If-Modified-Since} for cache revalidation requests so that the origin server only
+returns the documents if it has been modified since the given date
+\end{itemize}
+\subsubsection{Connection \& Upgrade}
+\label{sec:org6abc7cb}
+\begin{itemize}
+\item When using \texttt{HTTP/1.1} the client always initiates the connection
+\item Within this boundary there are ways to \uline{simulate} a \textbf{server-side push} of data:
+\begin{description}
+\item[{Polling:}] client regularly sends HTTP requests to receive updates
+\begin{itemize}
+\item Wastes bandwidth
+\end{itemize}
+\item[{Long Polling:}] client sends an HTTP request and the server holds it open until new data arrives
+\begin{itemize}
+\item Difficult to implement
+\item Not widely used
+\end{itemize}
+\end{description}
+\item This header is used to switch protocols to circumvent these restrictions
+and make server-side push more efficient with protocols such as \href{https://en.wikipedia.org/wiki/WebSocket}{WebSocket} through
+the following procedures:
+\begin{enumerate}
+\item Client and server have to agree to the protocol upgrade.
+\item Client initiates the upgrade with two request headers:
+
+\texttt{Connection:Upgrade}
+
+\texttt{Upgrade:[protocols]}
+\item Server responds with a \texttt{101 Switching Protocols} status if such upgrade is possible.
+\item Once established, both the client and the server can push data.
+\end{enumerate}
+\end{itemize}
+
+\subsection{Common Methods}
+\label{sec:org8aba420}
+\begin{center}
+\begin{tabular}{ll}
+Method & Definition\\
+\hline
+\textbf{GET} & Get a document from the Web server\\
+\textbf{HEAD} & Get the header of a document from the Web server\\
+\textbf{POST} & Send data from the client to the server for processing\\
+PUT & Save the body of the request on the server\\
+TRACE & Trace the message through the proxy servers to the server\\
+OPTIONS & Determine what methods can operate on a server\\
+DELETE & Remove a document from a Web server\\
+\end{tabular}
+\end{center}
+\subsection{\href{https://en.wikipedia.org/wiki/Telnet}{Telnet}}
+\label{sec:org63af9b4}
+\subsubsection{Properties}
+\label{sec:org87af12c}
+\begin{enumerate}
+\item Interactive text-oriented communication with a server
+\item Uses TCP to communicate with server
+\item Won't work with HTTPS
+\item Connections are not encrypted
+\end{enumerate}
+\subsubsection{Commands}
+\label{sec:orgfdb1edc}
+\begin{enumerate}
+\item Connecting to a server and requesting headers:
+\label{sec:org7989ee6}
+\begin{verbatim}
+$ telnet www.reddit.com 80
+HEAD /r/TUDelft HTTP/1.1
+Host: www.reddit.com
+Connection: close
+\end{verbatim}
+This gives a \texttt{301 Moved Permanently} error because reddit uses \texttt{HTTPS} for security reasons.
+
+Full message:
+\begin{verbatim}
+HTTP/1.1 301 Moved Permanently
+Retry-After: 0
+Location: https://www.reddit.com/r/TUDelft
+Content-Length: 0
+Accept-Ranges: bytes
+Date: Tue, 14 Dec 2021 00:04:13 GMT
+Via: 1.1 varnish
+Connection: close
+Cache-Control: private, max-age=3600
+Strict-Transport-Security: max-age=31536000; includeSubdomains
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-XSS-Protection: 1; mode=block
+Server: snooserv
+X-Clacks-Overhead: GNU Terry Pratchett
+\end{verbatim}
+Therefore, we need a different tool for HTTPS.
+\end{enumerate}
+\subsection{\href{https://en.wikipedia.org/wiki/OpenSSL}{OpenSSL}}
+\label{sec:org73485a4}
+\subsubsection{Properties}
+\label{sec:orgbd206a9}
+\begin{enumerate}
+\item Its \texttt{s\_client} component works just like telnet, though it's a bit less interactive
+\item Uses SSL+TLS for secure connection
+\item Supports HTTPS
+\item Connections are encrypted and secure
+\end{enumerate}
+\subsubsection{Commands}
+\label{sec:orgcfb1689}
+\begin{enumerate}
+\item Command-line args:
+\label{sec:orgdbda926}
+\begin{description}
+\item[{-crlf}] Translates a LF\textsubscript{Line Feed} (11th ASCII character) into \href{https://en.wikipedia.org/wiki/Carriage\_return\#Computers}{CR+LF}
+\item[{-connect}] Connects to a SSL HTTP server.
+\end{description}
+\item Connecting to a server and requesting headers:
+\label{sec:org97a2030}
+\begin{verbatim}
+$ openssl s_client -crlf -connect www.reddit.com:443
+HEAD /r/TUDelft HTTP/1.1
+Host: www.reddit.com
+Connection: close
+\end{verbatim}
+Output:
+\begin{verbatim}
+HTTP/1.1 200 OK
+Connection: close
+Cache-control: private, s-maxage=0, max-age=0, must-revalidate, no-store
+Content-Type: text/html; charset=utf-8
+Accept-Ranges: bytes
+Date: Tue, 14 Dec 2021 00:21:09 GMT
+Via: 1.1 varnish
+Vary: Accept-Encoding
+Set-Cookie: loid=0000000000hjgnftu8.2.1639441268721.Z0FBQUFBQmh0LU4wem9QRHBnYUhVQ1ZVaFlJNk5JVXJaWDBibEFvdG1BVGZlckNJSmdINVg5YTZZdm9XUzY3YUpNMzNKQ1l5RTFmZjhUTFRxMGVvSl9PX1QtTFV2cjRwcjlBRFNWcGJqOEpiSnI2WlRaVXJVY29aWUxib3ZiY1RNRnU0eGtaOExDdFo; path=/; expires=Thu, 14 Dec 2023 00:21:08 GMT; domain=.reddit.com; samesite=none; secure
+Set-Cookie: session_tracker=ibekfgdqdfkmfrhhcd.0.1639441269865.Z0FBQUFBQmh0LU4xeDhHaFVlbVg3Z01NNVBRdG04a1NSQk40cEdFQTlCejlzb1g2WEw2TU16Z1FhSV9BdnpRY0pkR2VTUnZyU2F2Y2VXa3h1ZGkxMVd6bEZoWWJRNkN3M0tzVWpNbFA5NU84R0JPd0s5XzlUMlpOMlFDQVB5MXUySGtLZmt5MkZxMV8; path=/; domain=.reddit.com; secure; SameSite=None; Secure
+Set-Cookie: token_v2=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mzk0NDQ3NDgsInN1YiI6Ii0zNFB4Y291Rm42RVF5OWRXYWZYdE9aZTJJa0JrNHciLCJsb2dnZWRJbiI6ZmFsc2UsInNjb3BlcyI6WyIqIiwiZW1haWwiLCJwaWkiXX0.vvcKCBTwGygYdk4vDEvWndsaH21ZpRs513STVPE45_c; Path=/; Domain=reddit.com; Expires=Thu, 14 Dec 2023 00:21:08 GMT; HttpOnly; Secure
+Set-Cookie: csv=2; Max-Age=63072000; Domain=.reddit.com; Path=/; Secure; SameSite=None
+Set-Cookie: edgebucket=MdiF5bpSjBeHhPKevt; Domain=reddit.com; Max-Age=63071999; Path=/;  secure
+Strict-Transport-Security: max-age=31536000; includeSubdomains
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-XSS-Protection: 1; mode=block
+Server: snooserv
+X-Clacks-Overhead: GNU Terry Pratchett
+\end{verbatim}
+\end{enumerate}
+\subsection{URL}
+\label{sec:orgd39ccf5}
+\begin{itemize}
+\item \uline{U}​niform \uline{R}​esource \uline{L}​ocators offer a standardized way to point to a resource on the Internet
+\item \uline{Not} restricted to HTTP, 
+URLs support different schemes/protocols such as \texttt{HTTP}, \texttt{HTTPS}, \texttt{mailto}, \texttt{file}, \texttt{ftp} etc.
+\end{itemize}
+\subsubsection{Syntax}
+\label{sec:org584252d}
+\texttt{<scheme>://<user>:<password>@<host>:<port>/<path>;<params>?<query>\#<frag>}
+\begin{description}
+\item[{\texttt{<scheme>}}] determines the protocol to use when connecting to the server
+\item[{\texttt{<user>:<password>}}] is the username and/or password to access a protected resource
+\item[{\texttt{<host>}}] is the domain name or IP address of the server
+\item[{\texttt{<port>}}] is the port on which the server is expecting requests
+\item[{\texttt{<path>}}] is the local path to the resource
+\item[{\texttt{<params>}}] are additional input parameters applications may require
+\item[{\texttt{<query>}}] are parameters passed to gateway resources (e.g. a search engine)
+Common convention: \texttt{name1=value1\&name2=value2...}
+\item[{\texttt{<frag>}}] the name of a \uline{piece} of a resource (i.e. a \uline{part} of a page), only used by the client.
+For example, with this tag the middle of a webpage may be shown by default.
+However, the client will always retrieve the entire page
+\end{description}
+\subsubsection{Design Restrictions}
+\label{sec:org9398476}
+\begin{enumerate}
+\item No invisible/non-printing characters
+\item Initially restricted to ASCII\textsubscript{American Standard Code for Information Interchange} characters, biased towards English speakers
+\begin{itemize}
+\item Added Later: character encoding e.g. whitespace -> \%20
+\item \href{https://en.wikipedia.org/wiki/Punycode}{Punycode (RFC 3492)} is used to \textbf{uniquely} and \textbf{reversibly} transform a Unicode string into an ASCII string.
+Introduces a potential security issue in \emph{mixed} scripts.
+\end{itemize}
+\end{enumerate}
+\subsubsection{Weaknesses}
+\label{sec:org4963ed5}
+\begin{enumerate}
+\item URLs point to a location instead of a Web resource.
+When the location of a website changes, the old URL won't work anymore.
+\end{enumerate}
+\subsection{Authentication}
+\label{sec:orgf55fb8d}
+HTTP is an \textbf{anonymous}, \textbf{stateless} request/response protocol.
+The same request, sent by different clients, is treated in exactly the same manner.
+Now, there are different identification methods such as:
+\begin{enumerate}
+\item HTTP headers
+\item Client IP address tracking
+\item Fat URLs
+\begin{itemize}
+\item Track users through the generation of unique URLs
+\begin{enumerate}
+\item First time a user visits a resource within a Website, a \textbf{unique ID} is generated by the server
+\item Server redirects client to the fat URL (URL + unique ID)
+\item Server \textbf{rewrites the HTML} when a HTTP request with a fat URL is received (by adding ID to all hyperlinks)
+\item As a result, independent HTTP requests are tied into a single session.
+\end{enumerate}
+\item Issues:
+\begin{itemize}
+\item Fat URLs are ugly
+\item They cannot be shared
+\item They break web caching mechanisms
+\item Extra server load through HTML page rewrites
+\item The ID is lost when the user navigates away from the website
+\end{itemize}
+\end{itemize}
+\item User login (HTTP Basic Authentication) 
+\begin{itemize}
+\item Server explicitly asks the user for authentication (401 Login Required)
+\item HTTP has a \textbf{built-in mechanism} to support username/password based authentication via
+\texttt{WWW-Authenticate} and \texttt{Authorization} headers
+\begin{itemize}
+\item Username and passwords are joined together by a colon and converted to \textbf{base-64 encoding}
+\item \href{https://en.wikipedia.org/wiki/Base64}{Base-64} ensures that only HTTP compatible characters are entered into a message.
+\end{itemize}
+\item HTTP is \textbf{stateless:} Once logged in, the client sends the login information with each request.
+\item Issues:
+\begin{enumerate}
+\item Username and password can be decoded trivially, the data is not encrypted.
+HTTPS solves this issue by encrypting sent data.
+\item Users tend to reuse login/password combinations
+\end{enumerate}
+\end{itemize}
+\end{enumerate}
+\subsection{Security}
+\label{sec:orgdfa4b03}
+\begin{itemize}
+\item Secure HTTP should provide:
+\begin{description}
+\item[{Server Authentication}] Client is sure to talk to the right server
+\item[{Client authentication}] Server is sure to talk to the right client
+\item[{Integrity}] Client and server are sure that their data is intact
+\item[{Encryption}] The data is sufficiently encrypted
+\item[{Efficiency}] Providing security should be a reasonable endeavour
+\end{description}
+\item \texttt{HTTPS} is the most popular, secure form of HTTP
+\begin{itemize}
+\item URL Scheme is \texttt{https://} instead of \texttt{http://}
+\item Request and response data are encrypted before being sent across the network via \href{https://en.wikipedia.org/wiki/Transport\_Layer\_Security\#SSL\_1.0,\_2.0,\_and\_3.0}{SSL}\textsubscript{Secure Sockets Layers}.
+Client and server \emph{negotiate} the cryptographic protocol to use.
+\item TRIVIA: To use \texttt{HTTPS} on your website, you need a \texttt{TLS} certificate from a CA\textsubscript{Certificate Authority}. \href{https://letsencrypt.org/}{Let's Encrypt} provides this service free of charge.
+\end{itemize}
+\end{itemize}
+\section{HTML5}
+\label{sec:org754a9cb}
+\subsection{Overview}
+\label{sec:org5e3be60}
+\begin{itemize}
+\item HTML 5 is a set of related technologies that together enable rich web content
+\item Successor to XHTML and HTML 4.01
+\end{itemize}
+\subsubsection{Features}
+\label{sec:orga9f0d93}
+\begin{description}
+\item[{Core HTML5}] marks up content
+\item[{CSS}] controls the appearance of marked-up content
+\item[{JavaScript}] manipulates the contents of HTML documents \& responds to user interactions
+\item \href{https://caniuse.com}{Not all browsers} support all features.
+\end{description}
+\section{JavaScript}
+\label{sec:org84953f9}
+\subsection{What is JavaScript?}
+\label{sec:orgea45ebd}
+\begin{itemize}
+\item JavaScript is an \uline{interpreted} programming language designed to implement complex, interactive features on web pages. However, JS is also used in other
+areas such as micro-controllers.
+\item JavaScript adheres to the \href{https://en.wikipedia.org/wiki/ECMAScript}{ECMAScript standard}.
+\item JavaScript is a \uline{dynamic} language, meaning you can't enforce a certain \emph{type} on a variable. All variables can hold any type.
+\end{itemize}
+\subsection{Scripting}
+\label{sec:orgad4b370}
+\begin{itemize}
+\item Scripts can be applied to the context of a website in two ways: Server-side scripting and client-side scripting.
+\begin{description}
+\item[{Server-side scripting}] refers to scripts that run on the web server. Only the results of the scripts are returned to the client.
+\begin{itemize}
+\item Advantage: The results are returned in plain HTML, so the computational power of the client platform is irrelevant.
+\item Disadvantage: As all computations are conducted on the server, this may result in an increasing server load.
+\end{itemize}
+\item[{Client-side scripting}] sends the script itself (and relevant data if necessary) to the client, who executes the code themselves.
+\begin{itemize}
+\item Advantage: The only job of the server is to send the script and data to the client to be processed, which reduces server load.
+\item Disadvantage: The performance of the web application is dependent on the client, as they do the hard work by executing
+the script.
+\end{itemize}
+\end{description}
+\item The lecturer recommends the \texttt{<script>} tag to be put to the bottom of the \texttt{<body>}, however; apparently there are more
+\href{https://stackoverflow.com/questions/436411/where-should-i-put-script-tags-in-html-markup}{modern} ways.
+\end{itemize}
+\subsection{Functional Programming}
+\label{sec:org759ccd0}
+\begin{itemize}
+\item JS allows functions to be treated as data, in other words it supports \href{https://en.wikipedia.org/wiki/Functional\_programming}{functional programming} by treating functions as
+\href{https://en.wikipedia.org/wiki/First-class\_citizen}{first-class citizens}.
+\begin{itemize}
+\item TRIVIA: The first chapter of \href{https://en.wikipedia.org/wiki/Structure\_and\_Interpretation\_of\_Computer\_Programs}{SICP} is an amazing introduction to functional programming, you may skim over it if you have the time.
+\end{itemize}
+\end{itemize}
+\subsubsection{Function as data: an example}
+\label{sec:org83bb935}
+\begin{itemize}
+\item Let's observe this following code (which you can find at the \href{https://chauff.github.io/cse1500-web-transcripts/js/\#required--recommended-readings-and-activities}{official lecture notes}):
+\begin{minted}[frame=lines,linenos=true]{js}
+function toPrint(x) {
+  console.log(x);
+}
+
+function my_func(x, y) {
+  y(x);
+}
+
+my_func(5, toPrint);
+\end{minted}
+
+RESULTS:
+\begin{verbatim}
+5
+undefined
+\end{verbatim}
+
+
+This is a perfect example of functional programming.
+\begin{itemize}
+\item As you can see, \texttt{my\_func} takes two arguments \texttt{x} and \texttt{y} and \emph{applies} \texttt{y} to \texttt{x}.
+It is implicitly assumed that \texttt{y} is a function: using another data type would result in a \texttt{TypeError}.
+\item The first result is produced by applying \texttt{y}, in our case \texttt{toPrint}, to \texttt{x}. \texttt{console.log(x)} prints the value of \texttt{x}, \texttt{5}.
+\item The second result is the value \texttt{my\_func} \emph{returns}, in our case it doesn't have a return value. So \texttt{undefined} is printed.
+\end{itemize}
+\end{itemize}
+\subsection{Scoping, hoisting and \texttt{this}}
+\label{sec:org6e30d4f}
+\subsubsection{Scoping}
+\label{sec:orgf5095d4}
+\begin{itemize}
+\item It is not always possible to access to a variable everywhere inside the code. For example, in Java you can't access a \texttt{private} value
+outside of you class, that's why we have \texttt{getters} and \texttt{setters}. They're only visible in the \textbf{scope} of your class. Thankfully, scoping
+is not as complicated in JavaScript.
+\item JavaScript has very few scopes: \texttt{local}, \texttt{global} and \texttt{block} (introduced with \href{http://es6-features.org/\#BlockScopedVariables}{ES6}).
+\begin{description}
+\item[{Local/function scope}] is the scope of the function. Variables declared inside a function cannot be accessed elsewhere. Local variables only exist in the context
+of the function. Each function creates a new scope.\textsuperscript{\href{https://www.w3schools.com/js/js\_scope.asp}{source}}
+\item[{Global scope}] includes the whole program. A variable declared outside of the function becomes global. It's globally accessible.
+\item[{Block scope}] is provided by the \texttt{let} and \texttt{const} keywords (both of which also introduced with ES6). Blocks are delineated with curly braces \texttt{\{ \}}. So, a variable declared
+this way:
+\begin{minted}[frame=lines,linenos=true]{js}
+{
+    let x = 2;
+}
+\end{minted}
+
+CANNOT be accessed outside of the curly braces. However, variables declared with \texttt{var} cannot have block scope. So:
+\begin{minted}[frame=lines,linenos=true]{js}
+{
+    var x = 2;
+}
+\end{minted}
+
+CAN be accessed outside of the curly braces if they do not belong to a function.
+\end{description}
+\item Here's a table of every scope in ES6 JavaScript\textsuperscript{\href{https://chauff.github.io/cse1500-web-transcripts/js/\#scoping-hoisting-and-this}{source}}:
+\end{itemize}
+\begin{center}
+\begin{tabular}{ll}
+Where/how & Scope\\
+\hline
+\texttt{var} declared within a function & local\\
+\texttt{var} declared outside of a function & global\\
+\texttt{let} (ES6) & block\\
+\texttt{const} (ES6) & block\\
+variable declaration without \texttt{var/let/const} & global\\
+\end{tabular}
+\end{center}
+\subsubsection{\href{https://developer.mozilla.org/en-US/docs/Glossary/Hoisting}{Hoisting}}
+\label{sec:orgc282a8f}
+\begin{description}
+\item[{Hoisting}] allows functions to be safely used in code \emph{before} they are declared.
+\item Variables can also be hoisted, however; \uline{JS does not hoist initializations} Take a look at the following code:
+\begin{minted}[frame=lines,linenos=true]{js}
+// Returns undefined from hoisted var declaration (not 6)
+console.log(num);
+
+// Declaration and initialization
+var num = 6; 
+
+// Returns 6 after the line with initialization is executed.
+console.log(num);
+
+\end{minted}
+\begin{itemize}
+\item This rule applies for function expressions as well. If you define a variable as a function, the expression won't be hoisted.
+\item Variable/function \emph{declarations} are hoisted:
+\begin{minted}[frame=lines,linenos=true]{js}
+f();
+console.log(x); // 5
+console.log(y); // 3
+function f() { // function declaration
+	    x = 5; // global scope
+	    y = 3; // global scope
+}
+
+\end{minted}
+\end{itemize}
+\end{description}
+\end{document}
