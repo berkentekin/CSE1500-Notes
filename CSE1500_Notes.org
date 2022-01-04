@@ -372,8 +372,161 @@ X-Clacks-Overhead: GNU Terry Pratchett
 	: 5
 	: 3
 	: undefined
-*** COMMENT =this=
-    
+*** =this=
+    - In Java, =this= refers to the current object. However, in JS what =this= refers
+      to is dependent on how the function containing =this= was called.
+    - The [[https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_objects/Function/bind][bind]] keyword can be used to independently set the function's =this= value. 
+** Design Patterns
+   + Instead of trying to come up with novel ways to do a job, we can use
+     tried and tested, effective design patterns for certain tasks.
+*** Objects
+    - In JavaScript, functions are objects.
+*** Creation, modification and access to objects
+    - There are several ways to create, modify and access objects:
+      #+begin_src js
+	var game = new Object();
+	game["id"] = 1;
+	game["player1"] = "Alice"; //bracket notation
+	game.player2 = "Bob"; //dot notation
+	console.log(game["player2"]); //prints out "Bob"
+	console.log(game.player1); //prints out "Alice"
+	 
+	game["won lost"] = "1 12"; // Can't be accessed using dot notation
+	 
+	game.printID = function () {
+	console.log(this.id);
+	};
+	game["printID"](); // prints out "1"
+	game.printID(); //prints out "1"
+	 
+      #+end_src
+
+    - Objects can also be created using *object literals:*
+      #+begin_src js
+	var game = {
+	  id: 1,
+	  player1: "Alice",
+	  player2: "Bob",
+	  "won lost": "1 12", // Valid only when enclosed with quote marks
+	  printID: function () {
+	    console.log(this.id);
+	  },
+	};
+	
+      #+end_src
+
+    - Object literals can contain other objects:
+      #+begin_src js
+	let paramModule = {
+	  /* parameter literal */
+	  Param: {
+	    minGames: 1,
+	    maxGames: 100,
+	    maxGameLength: 30,
+	  },
+	  printParams: function () {
+	    console.table(this.Param);
+	  },
+	};
+	
+      #+end_src
+*** Design Pattern I: Basic constructor
+    - In JS, OOP is achieved using functions, constructors and =this=:
+      #+begin_src js
+	function Game(id) {
+	  this.id = id;
+	  this.totalPoints = 0;
+	  this.winner = null;
+	  this.difficulty = "easy";
+	 
+	  this.getID = function () {
+	      return this.id;
+	  };
+	  this.setID = function (id) {
+	      this.id = id;
+	  };
+	}
+	 
+      #+end_src
+
+    - Objects are initialized using ~new~:
+      #+begin_src js
+	 
+	var g1 = new Game(1);
+	g1.getID();
+	g1.setID(2);
+	var g2 = new Game(3);
+	 
+	//ES6: object destructuring allows us to extract several object 
+	//     properties at once instead of one-by-one
+	var { totalP, winner, diff } = g1;
+	//ES6: template literals to make string concatenations more readable
+	console.log(
+	  `This game reached ${totalP} points, was won by ${winner} and had difficulty ${diff}.`
+	);
+	 
+      #+end_src
+
+    - JS runtime won't alert you in case you forget the ~new~ keyword when
+      creating an object, however it is very important that you use it.
+      If you create an object without ~new~, its ~this~ keyword will affect
+      the global object (=window= if the code is run inside of a browser).
+
+    - With JS, you can add new properties and methods to an object instance
+      after creation:
+      #+begin_src js
+	function Game(id) {
+	  this.id = id;
+	  this.getID = function () {
+	    return this.id;
+	  };
+	  this.setID = function (id) {
+		 this.id = id;
+	  };
+	}
+	
+	var g1 = new Game("1");
+	g1.player1 = "Alice";
+	
+	var g2 = new Game("2");
+	g2.player1 = "Bob";
+	
+	g1.printPlayer = function () {
+	  console.log(this.player1);
+	}; //we add a method on the fly!
+	g1.printPlayer(); //prints out "Alice"
+	
+	g2.printPlayer(); //TypeError: g2.printPlayer is not a function
+	
+	g1.hasOwnProperty("printPlayer"); //true
+	g2.hasOwnProperty("printPlayer"); //false
+	
+	g1.toString(); //"[object Object]" (we never defined toString() )
+	// IMPORTANT: Objects come with default methods, as illustrated with
+	// the toPrint() function.
+	
+      #+end_src
+**** Summary
+     - Advantages:
+       - Easy to use
+     - Disadvantages:
+       1. Not obvious how to use inheritance
+       2. Objects do not share functions
+       3. There are no private members
+*** Design Pattern II: Prototype-based constructor
+    - In JS, objects come with default methods. These methods are there
+      because of *prototype chaining*.
+    - Objects have a secret pointer to another object-the object's prototype.
+      The properties of the constructor's prototype are also accessible in
+      the new object.
+    - You can manually ``walk up'' the prototype chain of an object ~obj~
+      by calling ~obj.__proto__~. However, JS runtime usually does that for you.
+**** Summary
+     - Advantages:
+       - Inheritance is easy to achieve
+       - Objects share functions
+     - Disadvantages:
+       - No public/private distinction
 ** COMMENT An example: Number guessing game
 *** Initial Setup
     JavaScript codes are placed inside the ~<script>~ element in a HTML document. To demonstrate how JavaScript functions, I will start with a template
