@@ -5,7 +5,7 @@
 #+STARTUP: inlineimages
 
 * DISCLAIMER
-  Most of the notes here are a summarization of the lectures and lecture notes. When in doubt, always refer to the original sources.
+  Most of the notes here are a summary of the lectures and lecture notes. When in doubt, always refer to the original sources.
 * HTTP
 ** [[https://en.wikipedia.org/wiki/List_of_HTTP_status_codes][Status Codes]]
    - 1xx informational response :: Indicates that the request was received and understood.
